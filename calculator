@@ -1,0 +1,494 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>  
+#include <stdlib.h>  
+#include <string.h>   
+#include <math.h> 
+#include <easyx.h>
+#include <conio.h>
+
+
+
+void inputMatrix(int rows, int cols, int matrix[100][100], const char* prompt);//矩阵输入函数
+void printMatrix(int rows, int cols, int matrix[100][100]);//矩阵显示函数
+void addMatrices(int rows, int cols, int matrix1[100][100], int matrix2[100][100], int result[100][100]);//矩阵加法运算
+void unaddMatrices(int rows, int cols, int matrix1[100][100], int matrix2[100][100], int result[100][100]);//矩阵减法运算
+void scalarMultiply(int rows, int cols, int matrix[100][100], int scalar, int result[100][100]);//矩阵数乘运算
+void multiplyMatrices(int rowsA, int colsA, int matrixA[100][100], int rowsB, int colsB, int matrixB[100][100], int result[100][100]);//矩阵乘法运算
+int judgeinput(const char* input);//下面两个函数就是检测输入并返回数学函数，先把输入转为数字，再根据数字输出数学函数
+double calculate(int change, double x);
+
+
+
+
+
+/*这个枚举其实最开始是和judgeinput和calculate函数各个情况相对应的，后来为了用easyx画图改用.cpp文件后，用judgeinput返回值给functiontype初始化会报错，
+所以后面返回值就改成数字，改用变量change收集返回值传给calculate函数。*/
+enum {
+    FUNC_SIN,
+    FUNC_COS,
+    FUNC_SQRT,
+    FUNC_ATAN,
+    FUNC_FABS,
+
+    FUNC_UNKNOWN
+} FunctionType;//这里给了本代码可用的函数名，如果想增加可以在这里加一下，也需要在judgeinput和calculate函数中进行添加，最好在主函数中相应的printf提示中加入。
+
+
+
+
+
+int main() {
+    float a, b;
+    int mode;
+    char sign;
+    double result2 = 0;//累加积分结果
+    FILE* file;
+    char filename[] = "C:\\Users\\27748\\Desktop\\TheShy.txt";//这样设计换了电脑会自动在桌面创建文件
+    printf("------------------------calculator-----------------------\n");
+    while (1) {
+        printf("Please choose the function. Input 1, 2, 3, 4.\n");
+        scanf("%d", &mode);
+        getchar();
+
+        switch (mode) {
+        case 1://加减乘除功能，应该不太用注释吧qwq
+
+
+
+            // 打开文件以追加模式写入，如果文件不存在则创建，这a还是很好用的  
+            file = fopen(filename, "a");
+            if (file == NULL) {
+                perror("Error opening file");
+                return 1;
+            }
+
+            printf("Please choose your calculate mode.\n");
+            scanf(" %c", &sign); // %前加空格可以跳过换行符，新技能，太妙了
+            printf("Please input the first number.\n");
+            scanf("%f", &a);
+            printf("Please input the second number.\n");
+            scanf("%f", &b);
+
+            switch (sign) {
+            case '+':
+                fprintf(file, "%.2f + %.2f = %.2f\n", a, b, a + b);
+                printf("%.2f + %.2f = %.2f\n", a, b, a + b);
+                break;
+            case '-':
+                fprintf(file, "%.2f - %.2f = %.2f\n", a, b, a - b);
+                printf("%.2f - %.2f = %.2f\n", a, b, a - b);
+                break;
+            case '*':
+                fprintf(file, "%.2f * %.2f = %.2f\n", a, b, a * b);
+                printf("%.2f * %.2f = %.2f\n", a, b, a * b);
+                break;
+            case '/':
+                if (b != 0) {
+                    fprintf(file, "%.2f / %.2f = %.2f\n", a, b, a / b);
+                    printf("%.2f / %.2f = %.2f\n", a, b, a / b);
+                }
+                else {
+                    printf("Error: Division by zero.\n");
+                    fprintf(file, "Error: Division by zero (%.2f / 0)\n", a);
+                }
+                break;
+            default:
+                printf("Invalid input.\n");
+
+                break;
+            }
+
+
+            fclose(file);
+            break;
+        case 2:
+            int choice;
+            int rowsA, colsA, rowsB, colsB;
+            int matrixA[100][100], matrixB[100][100], result[100][100];
+            int scalar;
+            file = fopen(filename, "a");
+            if (file == NULL) {
+                perror("Error opening file");
+                return 1;
+            }
+            printf("Please choose matrix mode:\n");//下面是选择矩阵运算的形式，包括加减，数乘，乘法
+            printf("1. addition\n");
+            printf("2. subtraction\n");
+            printf("3. scalar multiplication\n");
+            printf("4. multiplication\n");
+            scanf("%d", &choice);
+
+            if (choice == 3 || choice == 4) {//数乘和乘法都先输入一个矩阵
+                printf("Please enter the number of rows and columns for the first matrix: \n");
+                scanf("%d %d", &rowsA, &colsA);
+                inputMatrix(rowsA, colsA, matrixA, "Please enter the elements of the first matrix: ");
+
+
+                if (choice == 4) {//如果是乘法，还要输入第二个矩阵并判断能否进行乘法运算
+                    printf("Please enter the number of rows and columns for the second matrix:\n ");
+                    scanf("%d %d", &rowsB, &colsB);
+                    if (colsA != rowsB) {
+                        printf("Error: Matrix style mismatch.\n");
+                        return 1;
+                    }
+                    inputMatrix(rowsB, colsB, matrixB, "Please enter the elements of the second matrix: ");
+                }
+            }
+            else {//加减法统一输入两个矩阵并判断能否进行运算
+                printf("Please enter the number of rows and columns for the first matrix:\n ");
+                scanf("%d %d", &rowsA, &colsA);
+                printf("Please enter the number of rows and columns for the second matrix:\n ");
+                scanf("%d %d", &rowsB, &colsB);
+                if (rowsA != rowsB || colsA != colsB) {
+                    printf("Error: Matrix style mismatch.\n");
+                    return 1;
+                }
+                rowsB = rowsA;
+                colsB = colsA;
+                inputMatrix(rowsA, colsA, matrixA, "Please enter the elements of the first matrix: ");
+                inputMatrix(rowsB, colsB, matrixB, "Please enter the elements of the second matrix: ");
+            }
+
+            //上面只进行矩阵的输入与判断，计算的过程统一放到了下面的switch语句里，看着好看
+            switch (choice) {
+            case 1:
+                addMatrices(rowsA, colsA, matrixA, matrixB, result);
+                printf("addition result:\n");
+                printMatrix(rowsA, colsA, result);
+                for (int i = 0; i < rowsA; i++) {
+                    for (int j = 0; j < colsA; j++) {
+                        fprintf(file, "%d ", matrixA[i][j]);
+                    }
+                    if (i == 0) { fprintf(file, "     +    "); }
+                    else { fprintf(file, "          "); }
+                    for (int j = 0; j < colsA; j++) {
+                        fprintf(file, "%d ", matrixB[i][j]);
+                    }
+                    if (i == 0) { fprintf(file, "     =    "); }
+                    else { fprintf(file, "            "); }
+                    for (int j = 0; j < colsA; j++) {
+                        fprintf(file, "%d ", result[i][j]);
+                    }
+                    fprintf(file, "\n");
+                }
+
+                break;
+            case 2:
+                unaddMatrices(rowsA, colsA, matrixA, matrixB, result);
+                printf("subtraction result:\n");
+                printMatrix(rowsA, colsA, result);
+                for (int i = 0; i < rowsA; i++) {
+                    for (int j = 0; j < colsA; j++) {
+                        fprintf(file, "%d ", matrixA[i][j]);
+                    }
+                    if (i == 0) { fprintf(file, "     -    "); }
+                    else { fprintf(file, "          "); }
+                    for (int j = 0; j < colsA; j++) {
+                        fprintf(file, "%d ", matrixB[i][j]);
+                    }
+                    if (i == 0) { fprintf(file, "     =    "); }
+                    else { fprintf(file, "            "); }
+                    for (int j = 0; j < colsA; j++) {
+                        fprintf(file, "%d ", result[i][j]);
+                    }
+                    fprintf(file, "\n");
+                }
+                break;
+            case 3:
+                printf("Please enter the multiplier: ");
+                scanf("%d", &scalar);
+                scalarMultiply(rowsA, colsA, matrixA, scalar, result);
+                printf("scalar multiplication result:\n");
+                printMatrix(rowsA, colsA, result);
+                for (int i = 0; i < rowsA; i++) {
+                    for (int j = 0; j < colsA; j++) {
+                        fprintf(file, "%d ", matrixA[i][j]);
+                    }
+                    if (i == 0) { fprintf(file, "     *%d =   ", scalar); }
+                    else { fprintf(file, "              "); }
+                    for (int j = 0; j < colsA; j++) {
+                        fprintf(file, "%d ", result[i][j]);
+                    }
+                    fprintf(file, "\n");
+                }
+                break;
+            case 4:
+                multiplyMatrices(rowsA, colsA, matrixA, rowsB, colsB, matrixB, result);
+                printf("multiplication result:\n");
+                printMatrix(rowsA, colsB, result);
+                for (int i = 0; i < rowsA || i < rowsB; i++) {
+                    if (i < rowsA) {
+                        for (int j = 0; j < colsA; j++) {
+                            fprintf(file, "%d ", matrixA[i][j]);
+                        }
+                    }
+                    else {
+                        for (int j = 0; j < colsA; j++) {
+                            fprintf(file, "   ");
+                        }
+                    }
+                    if (i == 0) { fprintf(file, "     *   "); }
+                    else { fprintf(file, "         "); }
+                    if (i < rowsB) {
+                        for (int j = 0; j < colsB; j++) {
+                            fprintf(file, "%d ", matrixB[i][j]);
+                        }
+                    }
+                    else {
+                        for (int j = 0; j < colsB; j++) {
+                            fprintf(file, "   ");
+                        }
+                    }
+                    if (i == 0) { fprintf(file, "     =   "); }
+                    else { fprintf(file, "          "); }
+                    if (i < rowsA) {
+                        for (int j = 0; j < colsB; j++) {
+                            fprintf(file, "%d ", result[i][j]);
+                        }
+                    }
+                    else {
+                        for (int j = 0; j < colsB; j++) {
+                            fprintf(file, "   ");
+                        }
+
+                    }
+                    fprintf(file, "\n");
+
+                }
+                break;
+            default:
+                printf("Invalid input.\n");
+                break;
+            }
+            fclose(file);
+            break;
+        case 3:
+            while (1) {
+                file = fopen(filename, "a");
+                if (file == NULL) {
+                    perror("Error opening file");
+                    return 1;
+                }
+                char functionName[5];
+                double x, result;
+                int change;
+
+
+                printf("Please enter the function name (sin, cos, sqrt, atan, fabs): \n");
+                scanf("%s", functionName, 5);
+
+
+                change = judgeinput(functionName);
+                if (change == 0) {
+                    fprintf(stderr, "Unknown function name\n");
+                    return EXIT_FAILURE;
+
+                }
+
+
+                double x_start, x_end, x_step, y;
+                int x1 = 10000, x2 = 10000, y1 = 10000, y2 = 10000;//赋值一万是因为远大于像素数，不影响显示出来的函数
+
+                //以下是设定定义域和x每一步的增量
+                printf("Please enter the start value for x:(recommend >=-1)\n");
+                scanf("%lf", &x_start);
+
+                printf("Please enter the end value for x:(recommend <=9)\n");
+                scanf("%lf", &x_end);
+
+                printf("Please enter the step size for x:(recommend 0.1)\n");
+                scanf("%lf", &x_step);
+
+                //以下绘图
+                initgraph(1000, 800, 1);
+                setbkcolor(BLUE);
+                cleardevice();
+                line(100, 0, 100, 800);
+                line(0, 400, 1000, 400);
+                for (x = x_start; x <= x_end; x += x_step) {
+                    /*循环的思路：之前设了两个点的坐标，都赋值10000避免影响图像，这里现将x1y1赋值给x2y2，再将函数计算结果的xy赋值给x1y1，
+                    如果x2y2依然为10000，就说明目前只输入了一个点的值，无法连线，跳过if；第二次循环会将第一个点赋给x2y2，然后再输入一个点坐标给x1y1，
+                    这时候就能进入if语句将两个点连起来。加循环直接画完图。*/
+
+
+                    y = calculate(change, x);
+                    printf("x=%lf,y=%lf\n", x, y);
+                    x2 = x1;y2 = y1;
+                    x1 = 100 + x * 100;y1 = -y * 100 + 400;
+                    if (x2 != 10000) { line(x1, y1, x2, y2); }
+
+                }saveimage(_T("C:\\Users\\27748\\Desktop\\hh.bmp"));
+                fprintf(file, "y=%s x\n", functionName);
+                while (1) {
+                    char s4[2];
+                    char s5[2] = "q";
+                    printf("input 'q' to leave.\n");
+                    scanf(" %s", &s4, 2);
+                    rewind(stdin);
+                    if (strcmp(s4, s5) == 0) { break; }
+                };
+                closegraph();
+                break;
+                fclose(file);
+            }break;
+        case 4:char functionName[5];//这里也是直接cv了case3的一部分代码来做定积分
+            double x;
+
+            int change;
+            result2 = 0;
+
+
+            printf("Please enter the function name (sin, cos, sqrt, atan, fabs): \n");
+            scanf("%s", functionName, 5);
+
+
+            change = judgeinput(functionName);
+            if (change == 0) {
+                fprintf(stderr, "Unknown function name\n");
+                return EXIT_FAILURE;
+
+            }
+
+
+            double x_start, x_end, x_step, y;
+
+
+
+            //以下是设定上下限并设定微分宽度
+            printf("Please enter the start value for x:(recommend >=-1)\n");
+            scanf("%lf", &x_start);
+
+            printf("Please enter the end value for x:(recommend <=9)\n");
+            scanf("%lf", &x_end);
+
+            printf("Please enter the step size for x:(recommend 0.01)\n");
+            scanf("%lf", &x_step);
+            for (x = x_start; x <= x_end; x += x_step) {
+                y = calculate(change, x);
+                result2 += y * x_step;
+
+            }
+            printf("积分结果是%lf。\n", result2);
+            break;
+
+
+
+        default:
+            printf("Invalid input.\n");
+            break;
+        }
+
+
+        printf("input '1' to leave,input '2' to continue.\n ");
+        int numq = 0;
+        scanf(" %d", &numq);
+        rewind(stdin);
+        switch (numq) {
+        case 1:
+            goto out1;
+            break;
+        case 2:break;
+        default:
+            printf("Invalid input.\n");
+            return EXIT_FAILURE;
+        }
+
+
+    }
+out1:
+    return 0;
+}
+void inputMatrix(int rows, int cols, int matrix[100][100], const char* prompt) {
+    for (int i = 0; i < rows; i++) {
+        printf("%s\n", prompt);
+        for (int j = 0; j < cols; j++) {
+            scanf("%d", &matrix[i][j]);
+        }
+    }
+}
+
+void printMatrix(int rows, int cols, int matrix[100][100]) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            printf("%d ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+}
+
+
+
+void addMatrices(int rows, int cols, int matrix1[100][100], int matrix2[100][100], int result[100][100]) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            result[i][j] = matrix1[i][j] + matrix2[i][j];
+        }
+    }
+}
+
+void unaddMatrices(int rows, int cols, int matrix1[100][100], int matrix2[100][100], int result[100][100]) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            result[i][j] = matrix1[i][j] - matrix2[i][j];
+        }
+    }
+}
+
+void scalarMultiply(int rows, int cols, int matrix[100][100], int scalar, int result[100][100]) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            result[i][j] = matrix[i][j] * scalar;
+        }
+    }
+}
+
+
+void multiplyMatrices(int rowsA, int colsA, int matrixA[100][100], int rowsB, int colsB, int matrixB[100][100], int result[100][100]) {
+    for (int i = 0; i < rowsA; i++) {
+        for (int j = 0; j < colsB; j++) {
+            result[i][j] = 0;
+            for (int k = 0; k < colsA; k++) {
+                result[i][j] += matrixA[i][k] * matrixB[k][j];
+            }
+        }
+    }
+}
+//下面两个函数就是检测输入并返回数学函数，先把输入转为数字，再根据数字输出数学函数
+int judgeinput(const char* input) {
+    if (strcmp(input, "sin") == 0) {
+        return 1;
+    }
+    else if (strcmp(input, "cos") == 0) {
+        return 2;
+    }
+    else if (strcmp(input, "sqrt") == 0) {
+        return 3;
+    }
+    else if (strcmp(input, "atan") == 0) {
+        return 4;
+    }
+    else if (strcmp(input, "fabs") == 0) {
+        return 5;
+    }
+
+    else {
+        return 0;
+    }
+}
+
+
+double calculate(int change, double x) {
+    switch (change) {
+    case 1:
+        return sin(x);
+    case 2:
+        return cos(x);
+    case 3:
+        return sqrt(x);
+    case 4:
+        return atan(x);
+    case 5:
+        return fabs(x);
+
+    }
+}
